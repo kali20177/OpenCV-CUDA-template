@@ -4,6 +4,8 @@
 using namespace std;
 using namespace cv;
 
+// 删除清晰度函数体内的灰度化
+
 /**
 * Brenner梯度方法
 *
@@ -11,16 +13,9 @@ using namespace cv;
 * @param image:
 * Return: double
 */
-double brenner(cv::Mat& image)
+double brenner(cv::Mat& gray_img)
 {
 	//assert(image.empty());
-
-	cv::Mat gray_img;
-	if (image.channels() == 3) {
-		cv::cvtColor(image, gray_img, CV_BGR2GRAY);
-	}
-
-
 	double result = .0f;
 	for (int i = 0; i < gray_img.rows; ++i) {
 		uchar* data = gray_img.ptr<uchar>(i);
@@ -39,18 +34,21 @@ double brenner(cv::Mat& image)
 * @param image:
 * Return: double
 */
-double tenengard(cv::Mat& image)
+double tenengard(cv::Mat& gray_img)
 {
 	//assert(image.empty());
-
-	cv::Mat gray_img, sobel_x, sobel_y, G;
-	if (image.channels() == 3) {
-		cv::cvtColor(image, gray_img, CV_BGR2GRAY);
-	}
+	
+	cv::Mat res_img, sobel_x, sobel_y, G;
+	
+	//medianBlur(gray_img, res_img, 3);
 
 	//分别计算x/y方向梯度
+	//cv::Sobel(res_img, sobel_x, CV_32FC1, 1, 0);
+	//cv::Sobel(res_img, sobel_y, CV_32FC1, 0, 1);
+
 	cv::Sobel(gray_img, sobel_x, CV_32FC1, 1, 0);
 	cv::Sobel(gray_img, sobel_y, CV_32FC1, 0, 1);
+	
 	cv::multiply(sobel_x, sobel_x, sobel_x);
 	cv::multiply(sobel_y, sobel_y, sobel_y);
 	cv::Mat sqrt_mat = sobel_x + sobel_y;
@@ -66,15 +64,11 @@ double tenengard(cv::Mat& image)
 * @param image:
 * Return: double
 */
-double laplacian(cv::Mat& image)
+double laplacian(cv::Mat& gray_img)
 {
 	//assert(image.empty());
 
-	cv::Mat gray_img, lap_image;
-	if (image.channels() == 3) {
-		cv::cvtColor(image, gray_img, CV_BGR2GRAY);
-	}
-
+	cv::Mat lap_image;
 	cv::Laplacian(gray_img, lap_image, CV_32FC1);
 	lap_image = cv::abs(lap_image);
 
@@ -88,15 +82,11 @@ double laplacian(cv::Mat& image)
 * @param image:
 * Return: double
 */
-double smd(cv::Mat& image)
+double smd(cv::Mat& gray_img)
 {
 	//assert(image.empty());
 
-	cv::Mat gray_img, smd_image_x, smd_image_y, G;
-	if (image.channels() == 3) {
-		cv::cvtColor(image, gray_img, CV_BGR2GRAY);
-	}
-
+	cv::Mat res_img, smd_image_x, smd_image_y, G;
 	cv::Mat kernel_x(3, 3, CV_32F, cv::Scalar(0));
 	kernel_x.at<float>(1, 2) = -1.0;
 	kernel_x.at<float>(1, 1) = 1.0;
@@ -121,15 +111,11 @@ double smd(cv::Mat& image)
 * @param image:
 * Return: double
 */
-double smd2(cv::Mat& image)
+double smd2(cv::Mat& gray_img)
 {
 	//assert(image.empty());
 
-	cv::Mat gray_img, smd_image_x, smd_image_y, G;
-	if (image.channels() == 3) {
-		cv::cvtColor(image, gray_img, CV_BGR2GRAY);
-	}
-
+	cv::Mat smd_image_x, smd_image_y, G;
 	cv::Mat kernel_x(3, 3, CV_32F, cv::Scalar(0));
 	kernel_x.at<float>(1, 2) = -1.0;
 	kernel_x.at<float>(1, 1) = 1.0;
@@ -153,15 +139,11 @@ double smd2(cv::Mat& image)
 * @param image:
 * Return: double
 */
-double energy_gradient(cv::Mat& image)
+double energy_gradient(cv::Mat& gray_img)
 {
 	//assert(image.empty());
 
-	cv::Mat gray_img, smd_image_x, smd_image_y, G;
-	if (image.channels() == 3) {
-		cv::cvtColor(image, gray_img, CV_BGR2GRAY);
-	}
-
+	cv::Mat smd_image_x, smd_image_y, G;
 	cv::Mat kernel_x(3, 3, CV_32F, cv::Scalar(0));
 	kernel_x.at<float>(1, 2) = -1.0;
 	kernel_x.at<float>(1, 1) = 1.0;
@@ -185,15 +167,12 @@ double energy_gradient(cv::Mat& image)
 * @param image:
 * Return: double
 */
-double eav(cv::Mat& image)
+double eav(cv::Mat& gray_img)
 {
 	//assert(image.empty());
 
-	cv::Mat gray_img, smd_image_x, smd_image_y, G;
-	if (image.channels() == 3) {
-		cv::cvtColor(image, gray_img, CV_BGR2GRAY);
-	}
-
+	cv::Mat smd_image_x, smd_image_y, G;
+	
 	double result = .0f;
 	for (int i = 1; i < gray_img.rows - 1; ++i) {
 		uchar* prev = gray_img.ptr<uchar>(i - 1);
@@ -215,11 +194,23 @@ double eav(cv::Mat& image)
 * @param image:
 * Return: double
 */
-double FC(cv::Mat& image)
+double FC(cv::Mat& gray_img)
 {
 	Mat mat_mean, mat_stddev;
-	meanStdDev(image, mat_mean, mat_stddev);//求灰度图像的均值、均方差
+	
+	meanStdDev(gray_img, mat_mean, mat_stddev); //求灰度图像的均值、均方差
 	double m = mat_mean.at<double>(0, 0);
 	double s = mat_stddev.at<double>(0, 0);
 	return s;
 }
+
+double cuda_FC(cv::Mat& image)
+{
+	cv::Scalar mean, std;
+	cv::cuda::GpuMat src, gray;
+	src.upload(image);
+	cuda::cvtColor(src, gray, COLOR_BGR2GRAY);
+	cv::cuda::meanStdDev(gray, mean, std);
+	return std.val[0];
+}
+
